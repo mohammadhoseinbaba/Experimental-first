@@ -41,6 +41,9 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include "std_msgs/Bool.h"
+#include "std_msgs/Int32.h"
+#include "geometry_msgs/Point.h"
 
 class ArucoMarkerPublisher
 {
@@ -61,6 +64,11 @@ private:
 
   image_transport::Publisher image_pub_;
   image_transport::Publisher debug_pub_;
+  
+  
+  
+  ros::Publisher marker_id_publisher ; 
+  ros::Publisher marker_center_publisher ; 
 
   cv::Mat inImage_;
   
@@ -71,6 +79,16 @@ public:
     image_sub_ = it_.subscribe("/image", 1, &ArucoMarkerPublisher::image_callback, this);
     image_pub_ = it_.advertise("result", 1);
     debug_pub_ = it_.advertise("debug", 1);
+    
+    
+    
+    
+    // /marker/id_number is a topic which contains the id of the detected marker 
+    marker_id_publisher = nh_.advertise<std_msgs::Int32>("/marker/id_number",1) ;
+    
+    // /marker/center_loc is a topic which holds the location of the center of the detected topic 
+    marker_center_publisher = nh_.advertise<geometry_msgs::Point>("/marker/center_loc",1) ;
+     
     
     nh_.param<bool>("use_camera_info", useCamInfo_, false);
     camParam_ = aruco::CameraParameters();
@@ -99,8 +117,21 @@ public:
         for (std::size_t i = 0; i < markers_.size(); ++i)
         {
           std::cout << markers_.at(i).id << " ";
+          
+          std_msgs::Int32 id_num_msg;
+          id_num_msg .data = markers_.at(i).id ;
+          marker_id_publisher.publish(id_num_msg) ; 
+          
+          
+          geometry_msgs::Point center_point_msg ; 
+          center_point_msg.x = markers_.at(i).getCenter().x ;  
+          center_point_msg.y = markers_.at(i).getCenter().y ;  
+          center_point_msg.z = 0 ;  
+          marker_center_publisher.publish(center_point_msg) ; 
         }
         std::cout << std::endl;
+        
+        
 
       // draw detected markers on the image for visualization
       for (std::size_t i = 0; i < markers_.size(); ++i)
